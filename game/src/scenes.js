@@ -70,7 +70,19 @@ function backButton(scene, target){
   bz.on("pointerup",()=>scene.scene.start(target||"home"));
 }
 
-WS.ui = {skyBG, button, backButton};
+// Place a small drawn icon + text as one left-anchored label (icon then text),
+// replacing pasted-on platform emoji. Returns {ico,txt,right}.
+function iconText(scene,x,y,iconKey,text,opts){
+  opts=opts||{};
+  const size=opts.size||18, gap=opts.gap||6, fs=opts.fontSize||15;
+  const oy=opts.originY==null?0.5:opts.originY;
+  const ico=scene.textures.exists(iconKey)?scene.add.image(x,y+(oy===0?size/2:0),iconKey).setDisplaySize(size,size).setOrigin(0,0.5):null;
+  const tx=x+(ico?size+gap:0);
+  const txt=scene.add.text(tx,y,text,{fontFamily:WS.FONT,fontSize:fs+"px",fontStyle:opts.weight||"bold",color:opts.color||HEX(C.ink)}).setOrigin(0,oy);
+  return {ico,txt,right:tx+txt.width};
+}
+
+WS.ui = {skyBG, button, backButton, iconText};
 
 WS.HomeScene = class extends Phaser.Scene {
   constructor(){ super("home"); }
@@ -124,8 +136,12 @@ WS.HomeScene = class extends Phaser.Scene {
     const pg=this.add.graphics().setDepth(4);
     pg.fillStyle(0x000000,0.18); pg.fillRoundedRect(W-134,WS.SAFE.top+16,120,38,19);
     pg.fillStyle(0xFFFFFF,0.95);  pg.fillRoundedRect(W-136,WS.SAFE.top+14,120,38,19);
-    const pill=this.add.text(W-76,WS.SAFE.top+33,(chest?"🎁 ":"🪙 ")+WS.Econ.balance(),
-      {fontFamily:WS.FONT,fontSize:"16px",fontStyle:"bold",color:HEX(chest?C.clay:C.ink)}).setOrigin(0.5).setDepth(5);
+    const pill=this.add.container(W-76,WS.SAFE.top+33).setDepth(5);
+    const iconKey=chest?"ic_gift":"ic_coin";
+    const bal=this.add.text(0,0,""+WS.Econ.balance(),{fontFamily:WS.FONT,fontSize:"16px",fontStyle:"bold",color:HEX(chest?C.clay:C.ink)}).setOrigin(0,0.5);
+    const ic=this.textures.exists(iconKey)?this.add.image(0,0,iconKey).setDisplaySize(18,18).setOrigin(0,0.5):null;
+    const pgap=5, iw=ic?18:0, total=iw+(ic?pgap:0)+bal.width;
+    if(ic){ ic.x=-total/2; bal.x=-total/2+iw+pgap; pill.add([ic,bal]); } else { bal.x=-bal.width/2; pill.add(bal); }
     const pz=this.add.zone(W-136,WS.SAFE.top+14,120,38).setOrigin(0).setInteractive().setDepth(5);
     pz.on("pointerup",()=>this.scene.start("shop"));
     if(chest) this.tweens.add({targets:pill,scale:1.12,duration:620,yoyo:true,repeat:-1,ease:"Sine.easeInOut"});
@@ -154,7 +170,7 @@ WS.SelectScene = class extends Phaser.Scene {
 
     // --- node layout: a serpentine climb, world 1 at the base, 7 at the summit ---
     const order=WS.WORLD_ORDER, n=order.length;
-    const topY=140, botY=H-BAR-64, cx=W/2, amp=96;
+    const topY=140, botY=H-BAR-90, cx=W/2, amp=96;
     const stepY=(botY-topY)/(n-1);
     const off=i=>(i%2===0?-1:1)*(0.5+0.2*Math.sin(i*1.3));
     const pos=order.map((k,i)=>({x:cx+amp*off(i), y:botY-i*stepY}));
@@ -162,15 +178,19 @@ WS.SelectScene = class extends Phaser.Scene {
     // current world = highest unlocked; it pulses ("you are here")
     let cur=0; order.forEach((k,i)=>{ if(WS.isUnlocked(k)) cur=i; });
 
-    // winding trail behind the nodes (baked)
+    // winding trail behind the nodes (baked) — slightly transparent so it sits
+    // INTO the painted backdrop rather than on top of it.
     const trail=WS.Art.mapTrail(this,"map_trail",pos);
-    if(trail) this.add.image(0,0,trail).setOrigin(0).setDepth(1);
+    if(trail) this.add.image(0,0,trail).setOrigin(0).setDepth(1).setAlpha(0.9);
 
-    const ND=68;                                   // node display diameter
+    const ND=70;                                   // node display diameter
     order.forEach((key,i)=>{
       const cfg=WS.WORLDS[key], p=pos[i], unlocked=WS.isUnlocked(key);
-      const nodeKey = unlocked ? ("node_"+cfg.accent.toString(16)) : "node_lock";
-      WS.Art.mapNode(this,nodeKey,cfg.accent,!unlocked);
+      const nodeKey = "node_"+key+(unlocked?"":"_lock");
+      WS.Art.mapNode(this,nodeKey,key,cfg.accent,!unlocked);   // world-portrait medallion
+
+      // soft ground shadow so the badge sits on the mountain
+      this.add.ellipse(p.x,p.y+ND*0.46,ND*0.82,ND*0.28,0x000000,0.22).setDepth(2);
 
       // pulsing halo on the current node
       if(i===cur){
@@ -178,32 +198,29 @@ WS.SelectScene = class extends Phaser.Scene {
         this.tweens.add({targets:ring,scale:ND/160*1.5,alpha:0,duration:1300,repeat:-1,ease:"Sine.easeOut"});
       }
 
-      const node=this.add.image(p.x,p.y,nodeKey).setOrigin(0.5,0.48).setDepth(3).setScale(ND/140);
+      const node=this.add.image(p.x,p.y,nodeKey).setOrigin(0.5).setDepth(3).setScale(ND/140);
       if(i===cur) this.tweens.add({targets:node,scale:ND/140*1.06,duration:760,yoyo:true,repeat:-1,ease:"Sine.easeInOut"});
 
-      // node face: world number (unlocked) or lock (locked)
-      if(unlocked){
-        WS.shadow(this.add.text(p.x,p.y,""+cfg.order,WS.T(24,"#FFF6E4",{strokeColor:WS.HEX(cfg.accentD),strokeWidth:4})).setOrigin(0.5).setDepth(4),2);
-      } else if(this.textures.exists("ic_lock")){
-        this.add.image(p.x,p.y,"ic_lock").setDisplaySize(28,28).setDepth(4);
-      } else {
-        this.add.text(p.x,p.y,"🔒",{fontFamily:WS.FONT,fontSize:"22px"}).setOrigin(0.5).setDepth(4);
-      }
+      // lock icon over the (desaturated) portrait for locked worlds
+      if(!unlocked && this.textures.exists("ic_lock")) this.add.image(p.x,p.y,"ic_lock").setDisplaySize(30,30).setDepth(4);
 
-      // labels under the node (outlined text reads on the mountain — no plates)
-      const ly=p.y+ND/2+8;
-      WS.shadow(this.add.text(p.x,ly,cfg.name,WS.T(17,unlocked?"#FFFFFF":"#E6ECF2",{strokeColor:"#2A3A22",strokeWidth:4})).setOrigin(0.5,0).setDepth(4).setAlpha(unlocked?1:0.9),2);
+      // world-number badge, bottom-right of the medallion (off the portrait)
+      const bx=p.x+ND*0.34, by=p.y+ND*0.34;
+      this.add.circle(bx,by,12,unlocked?cfg.accentD:0x5A6570).setStrokeStyle(2.5,0xFFFFFF,0.92).setDepth(4);
+      this.add.text(bx,by,""+cfg.order,{fontFamily:WS.FONT,fontSize:"13px",fontStyle:"800",color:"#FFFFFF"}).setOrigin(0.5).setDepth(5);
+
+      // label block under the node, ON a translucent plate so it reads on ANY
+      // backdrop — snow cap (Blizzard), trail rope, or painted art.
+      const ly=p.y+ND/2+10;
+      const nameTxt=this.add.text(p.x,ly,cfg.name,WS.T(17,unlocked?"#FFFFFF":"#DFE6EC",{strokeColor:"#14212E",strokeWidth:4})).setOrigin(0.5,0).setDepth(4);
       let sub;
-      if(!unlocked){
-        const prev=WS.WORLDS[order[i-1]];
-        sub="🔒 Reach "+cfg.unlock+" in "+prev.name;
-      } else if(this.testOn){
-        sub="Start · Lv "+this.startLevel+" ›";
-      } else {
-        const best=WS.store.best(key), bl=WS.store.bestLevel(key);
-        sub = best>0 ? ("Best "+best+(bl>0?("  ·  Lv "+bl):"")) : "Play ›";
-      }
-      WS.shadow(this.add.text(p.x,ly+21,sub,WS.T(12,"#FFFFFF",{weight:"700",strokeColor:"#2A3A22",strokeWidth:3})).setOrigin(0.5,0).setDepth(4).setAlpha(0.96),1);
+      if(!unlocked){ const prev=WS.WORLDS[order[i-1]]; sub="Reach "+cfg.unlock+" in "+prev.name; }
+      else if(this.testOn){ sub="Start · Lv "+this.startLevel+" ›"; }
+      else { const best=WS.store.best(key), bl=WS.store.bestLevel(key);
+        sub = best>0 ? ("Best "+best+(bl>0?("  ·  Lv "+bl):"")) : "Play ›"; }
+      const subTxt=this.add.text(p.x,ly+21,sub,WS.T(12,"#FFFFFF",{weight:"700",strokeColor:"#14212E",strokeWidth:3})).setOrigin(0.5,0).setDepth(4).setAlpha(0.98);
+      const plateW=Math.max(nameTxt.width,subTxt.width)+26;
+      this.add.image(p.x,ly+19,WS.Art.mapPlate(this)).setDisplaySize(plateW,44).setDepth(3.4).setAlpha(unlocked?0.95:0.85);
 
       // tap an unlocked node to play
       if(unlocked){

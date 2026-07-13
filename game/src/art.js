@@ -127,26 +127,31 @@ WS.Art={
      the board with beige and hiding the world art behind it. */
   hollowFrame(scene,key,w,h,r0){
     if(this.has(scene,key)) return;
-    if(WS.Assets.bakeNine(scene,'panel_frame',key,w,h+4)) return;
-    const g=scene.make.graphics({add:false});
     const bd=10, R=r0||18;
-    g.fillStyle(0x8A5A32,1); g.fillRoundedRect(0,4,w,h,R);
-    g.fillStyle(0xA9713D,1); g.fillRoundedRect(0,0,w,h,R);
-    g.fillStyle(0xC08A4E,0.9); g.fillRoundedRect(3,2,w-6,7,4);
-    g.fillStyle(0x6E4526,0.9);
-    [[7,7],[w-7,7],[7,h-7],[w-7,h-7]].forEach(([x,y])=>g.fillCircle(x,y,3.5));
-    g.lineStyle(3,0x6E4526,0.9); g.strokeRoundedRect(bd,bd,w-2*bd,h-2*bd,R-8);
-    g.eraseRoundedRect ? null : null;
-    g.generateTexture(key,w,h+4); g.destroy();
-    // punch the centre with an erase pass (Graphics can't erase; use a canvas)
+    // Border art: shipped wooden 9-slice if present, else procedural.
+    if(!WS.Assets.bakeNine(scene,'panel_frame',key,w,h+4)){
+      const g=scene.make.graphics({add:false});
+      g.fillStyle(0x8A5A32,1); g.fillRoundedRect(0,4,w,h,R);
+      g.fillStyle(0xA9713D,1); g.fillRoundedRect(0,0,w,h,R);
+      g.fillStyle(0xC08A4E,0.9); g.fillRoundedRect(3,2,w-6,7,4);
+      g.fillStyle(0x6E4526,0.9);
+      [[7,7],[w-7,7],[7,h-7],[w-7,h-7]].forEach(([x,y])=>g.fillCircle(x,y,3.5));
+      g.lineStyle(3,0x6E4526,0.9); g.strokeRoundedRect(bd,bd,w-2*bd,h-2*bd,R-8);
+      g.generateTexture(key,w,h+4); g.destroy();
+    }
+    // A hollow frame must be HOLLOW regardless of source: the shipped
+    // panel_frame.png ships a CREAM centre, and that pale fill was the "pale
+    // square" bleeding out around the board. Punch a transparent centre via
+    // canvas (Graphics can't erase) on BOTH the shipped and procedural paths.
     try{
       const src=scene.textures.get(key).getSourceImage();
-      const cv=document.createElement('canvas'); cv.width=w; cv.height=h+4;
+      const cw=src.width, ch=src.height;
+      const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
       const ctx=cv.getContext('2d');
       ctx.drawImage(src,0,0);
       ctx.globalCompositeOperation='destination-out';
       ctx.beginPath();
-      const rr=Math.max(2,R-8), x0=bd+2, y0=bd+2, ww=w-2*bd-4, hh=h-2*bd-4;
+      const rr=Math.max(2,R-8), x0=bd+2, y0=bd+2, ww=cw-2*bd-4, hh=ch-2*bd-8;
       ctx.moveTo(x0+rr,y0);
       ctx.arcTo(x0+ww,y0,x0+ww,y0+hh,rr); ctx.arcTo(x0+ww,y0+hh,x0,y0+hh,rr);
       ctx.arcTo(x0,y0+hh,x0,y0,rr);       ctx.arcTo(x0,y0,x0+ww,y0,rr);
@@ -414,15 +419,19 @@ WS.Art={
   // Backdrop: sky gradient + distant range + one central snowy massif. Baked
   // ONCE — the whole thing is a single Image, no per-frame Graphics.
   mapBackdrop(scene){
+    // Prefer the painted map art (bg_map.jpg, dropped in like the world scenery).
+    if(this.has(scene,'bg_map')) return 'bg_map';
     const key='map_bg';
     if(this.has(scene,key)) return key;
     const g=scene.make.graphics({add:false});
     const top=0x86C6E6, mid=0xC1E2EF, bot=0xF4E8CC;
     for(let i=0;i<44;i++){ const t=i/44, c=t<0.5?mix(top,mid,t*2):mix(mid,bot,(t-0.5)*2);
       g.fillStyle(c,1); g.fillRect(0,Math.floor(H*t),W,Math.ceil(H/44)+1); }
-    // sun glow, upper-left
-    for(let i=6;i>0;i--){ g.fillStyle(0xFFF2C4,0.09); g.fillCircle(66,92,18+i*12); }
-    g.fillStyle(0xFFE9A8,0.92); g.fillCircle(66,92,26);
+    // sun glow, upper-RIGHT sky — clear of the top-left header text (was upper-left,
+    // which sat under the "Climb the slide" title).
+    const sunX=W*0.80, sunY=H*0.15;
+    for(let i=6;i>0;i--){ g.fillStyle(0xFFF2C4,0.09); g.fillCircle(sunX,sunY,18+i*12); }
+    g.fillStyle(0xFFE9A8,0.92); g.fillCircle(sunX,sunY,24);
     const rnd=prand(4242);
     // distant range
     const ridge=(baseY,amp,col,alpha,n)=>{ g.fillStyle(col,alpha); g.beginPath(); g.moveTo(0,H); g.lineTo(0,baseY);
@@ -434,9 +443,10 @@ WS.Art={
     g.fillStyle(0x8C7A66,1);
     g.beginPath(); g.moveTo(0,H); g.lineTo(W*0.16,H*0.60); g.lineTo(peakX,peakY);
     g.lineTo(W*0.90,H*0.56); g.lineTo(W,H*0.64); g.lineTo(W,H); g.closePath(); g.fillPath();
-    // shaded right flank
+    // shaded right flank — inner edge follows the fall-line as a SLOPE back to the
+    // peak (was a hard vertical line straight down from the summit).
     g.fillStyle(0x6F5F4E,0.5);
-    g.beginPath(); g.moveTo(peakX,peakY); g.lineTo(W*0.90,H*0.56); g.lineTo(W,H*0.64); g.lineTo(W,H); g.lineTo(peakX,H); g.closePath(); g.fillPath();
+    g.beginPath(); g.moveTo(peakX,peakY); g.lineTo(W*0.90,H*0.56); g.lineTo(W,H*0.64); g.lineTo(W,H); g.lineTo(peakX+W*0.12,H); g.closePath(); g.fillPath();
     // snow cap
     g.fillStyle(0xF4F8FC,1);
     g.beginPath(); g.moveTo(peakX,peakY);
@@ -472,26 +482,63 @@ WS.Art={
     blob(0x9C7B4C,1,14,0);         // trail edge (darker)
     blob(0xE7CF9E,1,11,0);         // trail body (tan)
     blob(0xF6EBC9,0.9,6,0);        // inner highlight
-    // dashed footpath dots every ~8th sample
-    g.fillStyle(0xFFFFFF,0.6);
-    for(let i=4;i<path.length;i+=8) g.fillCircle(path[i].x,path[i].y,2.6);
+    // (footpath dots removed — they cut through the node labels)
     g.generateTexture(key,W,H); g.destroy();
     return key;
   },
 
-  // A single node medallion, baked per state (key varies by accent / locked).
-  mapNode(scene,key,accent,locked){
+  // A node medallion = a CIRCULAR CROP of the world's own background inside a
+  // chunky accent ring with a gloss highlight — reads instantly as "that world".
+  // Locked worlds get the same portrait desaturated + a slate ring. Baked once
+  // per (world, locked) via canvas (like bakeNine). Falls back to a flat accent
+  // disc if the world background hasn't loaded.
+  mapNode(scene,key,worldKey,accent,locked){
     if(this.has(scene,key)) return key;
-    const D=140, R=D/2, cy=R+2;
-    const base=locked?0x9AA6B0:accent;
+    const D=140, R=D/2, ring=9;
+    const cv=document.createElement('canvas'); cv.width=D; cv.height=D;
+    const ctx=cv.getContext('2d');
+    const hex=n=>'#'+(n>>>0).toString(16).padStart(6,'0').slice(-6);
+    ctx.save();
+    ctx.beginPath(); ctx.arc(R,R,R-ring/2,0,Math.PI*2); ctx.clip();
+    const src='bg_'+worldKey;
+    if(scene.textures.exists(src)){
+      const img=scene.textures.get(src).getSourceImage();
+      // centre-weighted square crop from the scenic upper third of the painting
+      const s=Math.min(img.width,img.height);
+      const sx=(img.width-s)/2, sy=Math.min(img.height-s, img.height*0.16);
+      ctx.drawImage(img, sx,sy,s,s, ring/2,ring/2, D-ring, D-ring);
+    } else {
+      ctx.fillStyle=hex(accent); ctx.fillRect(0,0,D,D);
+    }
+    if(locked){
+      ctx.globalCompositeOperation='saturation'; ctx.fillStyle='hsl(0,0%,50%)'; ctx.fillRect(0,0,D,D);
+      ctx.globalCompositeOperation='source-over'; ctx.fillStyle='rgba(44,54,68,0.42)'; ctx.fillRect(0,0,D,D);
+    }
+    // top gloss
+    const grd=ctx.createLinearGradient(0,0,0,D);
+    grd.addColorStop(0,'rgba(255,255,255,0.38)'); grd.addColorStop(0.42,'rgba(255,255,255,0)');
+    ctx.fillStyle=grd; ctx.fillRect(0,0,D,D);
+    ctx.restore();
+    // accent ring + inner shade line for depth
+    ctx.lineWidth=ring; ctx.strokeStyle=locked?'#5A6570':hex(accent);
+    ctx.beginPath(); ctx.arc(R,R,R-ring/2,0,Math.PI*2); ctx.stroke();
+    ctx.lineWidth=2.5; ctx.strokeStyle='rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.arc(R,R,R-ring-1,0,Math.PI*2); ctx.stroke();
+    ctx.lineWidth=2.5; ctx.strokeStyle=locked?'rgba(255,255,255,0.25)':hex(tint(accent,0.5));
+    ctx.beginPath(); ctx.arc(R,R,R-ring+3,0,Math.PI*2); ctx.stroke();
+    scene.textures.addCanvas(key, cv);
+    return key;
+  },
+
+  // Translucent rounded plate placed behind a node's label so it reads on any
+  // backdrop (white snow, trail rope, painted art). Baked once, stretched per label.
+  mapPlate(scene){
+    const key='map_plate';
+    if(this.has(scene,key)) return key;
+    const W0=220,H0=52,R=15;
     const g=scene.make.graphics({add:false});
-    g.fillStyle(0x000000,0.18); g.fillCircle(R,cy+7,R-6);                 // drop shadow
-    g.fillStyle(locked?0x6E7A85:shade(accent,0.42),1); g.fillCircle(R,cy,R-4); // stone ring
-    g.fillStyle(base,1); g.fillCircle(R,cy,R-16);                        // inner disc
-    g.fillStyle(0xFFFFFF,0.30); g.fillEllipse(R,cy-16,R*0.95,R*0.55);    // top gloss
-    g.lineStyle(4,tint(base,0.42),0.9); g.strokeCircle(R,cy,R-16);       // rim light
-    g.lineStyle(6,shade(base,0.32),0.5); g.strokeCircle(R,cy,R-4);       // outer edge
-    g.generateTexture(key,D,D+10); g.destroy();
+    g.fillStyle(0x14212E,0.52); g.fillRoundedRect(0,0,W0,H0,R);
+    g.generateTexture(key,W0,H0); g.destroy();
     return key;
   },
 

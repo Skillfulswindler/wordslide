@@ -25,7 +25,12 @@ const prev    = process.argv[2] || join(root, 'Wordslide_Game_v6.html');
 const outFile = process.argv[3] || join(root, 'Wordslide_Game_v7.html');
 
 // ---- module order (must match main.js import chain, minus main/words) ----
-const MODULES = ['worlds','assets','svgart','art','juice','weather','audio','monetize','game','scenes','ui','boot'];
+// layout MUST be first (everything destructures its constants at import time)
+// and health/analytics/econ must precede monetize (it reports into all three).
+// This list was missing layout/tuning/health/analytics/econ — a regenerated
+// export would have died at boot with undefined layout constants.
+const MODULES = ['layout','tuning','worlds','assets','svgart','art','juice','weather',
+                 'audio','health','analytics','econ','monetize','game','scenes','ui','boot'];
 const MODULE_MARK = '/* Wordslide — shared config';   // start of the first module in the export
 
 // ---- 1. reuse the head + wordlist preamble from the previous export ----

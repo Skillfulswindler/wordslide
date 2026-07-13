@@ -4,7 +4,7 @@
 "use strict";
 const WS=window.WS;
 const {W,H,MARGIN,C,HEX}=WS;
-const {skyBG,button,backButton}=WS.ui;
+const {skyBG,button,backButton,iconText}=WS.ui;
 
 // shared: SVG-art background + foliage for menu scenes
 function menuBG(scene,worldKey){
@@ -79,7 +79,7 @@ WS.SettingsScene = class extends Phaser.Scene {
       this.add.text(W-MARGIN-18,y+27,"OWNED ✓",{fontFamily:WS.FONT,fontSize:"13px",fontStyle:"bold",color:HEX(C.teal)}).setOrigin(1,0.5);
       y+=66;
     } else {
-      button(this,MARGIN,y,W-2*MARGIN,50,"🚫 Remove ads — "+WS.IAP.priceOf(WS.MONETIZE.revenuecat.products.removeAds,"$4.99"),
+      button(this,MARGIN,y,W-2*MARGIN,50,"Remove ads — "+WS.IAP.priceOf(WS.MONETIZE.revenuecat.products.removeAds,"$4.99"),
         C.gold,0xD9A32E,async()=>{
           const r=await WS.IAP.buyRemoveAds();
           if(r.ok) this.scene.restart();
@@ -181,7 +181,7 @@ WS.StatsScene = class extends Phaser.Scene {
     // world bests (2-col) + daily/duel
     card(24+4*20+10+44); title("BEST SCORES");
     WS.WORLD_ORDER.forEach((k,i)=>cell(i%2,Math.floor(i/2),WS.WORLDS[k].name,WS.store.best(k)||"—"));
-    cell(1,3,"Daily 🔥",d.streak+" (best "+d.bestStreak+")",C.clayD);
+    cell(1,3,"Daily streak",d.streak+" (best "+d.bestStreak+")",C.clayD);
     const dy=y+26+4*20+6;
     this.add.text(MARGIN+16,dy,"Duel wins",{fontFamily:WS.FONT,fontSize:"12px",color:HEX(C.mute)});
     this.add.text(W-MARGIN-16,dy,"P1 "+duel.p1+" · P2 "+duel.p2+" · ties "+duel.ties,{fontFamily:WS.FONT,fontSize:"12px",fontStyle:"bold",color:HEX(C.ink)}).setOrigin(1,0);
@@ -194,7 +194,8 @@ WS.StatsScene = class extends Phaser.Scene {
     WS.ACH.forEach((a,i)=>{
       const got=!!earned[a.id];
       const x=MARGIN+16+(i%2)*HALF, yy=y+26+Math.floor(i/2)*20;
-      this.add.text(x,yy,(got?"🏆 ":"· ")+a.name,{fontFamily:WS.FONT,fontSize:"12px",fontStyle:got?"bold":"normal",color:HEX(got?C.teal:C.mute)});
+      if(got && this.textures.exists("ic_trophy")) this.add.image(x+6,yy+8,"ic_trophy").setDisplaySize(14,14).setOrigin(0.5);
+      this.add.text(x+(got?15:0),yy,(got?"":"· ")+a.name,{fontFamily:WS.FONT,fontSize:"12px",fontStyle:got?"bold":"normal",color:HEX(got?C.teal:C.mute)});
     });
   }
 };
@@ -287,7 +288,8 @@ WS.DuelEndScene = class extends Phaser.Scene {
     menuBG(this);
     const win = d.p1===d.p2 ? 0 : (d.p1>d.p2?1:2);
     WS.store.bumpDuel(win===0?"ties":(win===1?"p1":"p2"));
-    this.add.text(W/2,160,win===0?"It's a tie!":("🏆 Player "+win+" wins!"),{fontFamily:WS.FONT,fontSize:"34px",fontStyle:"bold",color:HEX(0x6B4F99)}).setOrigin(0.5);
+    if(win!==0 && this.textures.exists("ic_trophy")) this.add.image(W/2,116,"ic_trophy").setDisplaySize(46,46).setOrigin(0.5);
+    this.add.text(W/2,160,win===0?"It's a tie!":("Player "+win+" wins!"),{fontFamily:WS.FONT,fontSize:"34px",fontStyle:"bold",color:HEX(0x6B4F99)}).setOrigin(0.5);
     const row=(label,score,y,hl)=>{
       const g=this.add.graphics(); g.fillStyle(0xffffff,hl?1:0.8); g.fillRoundedRect(70,y,W-140,74,16);
       if(hl){ g.lineStyle(3,0x8E6FC1,1); g.strokeRoundedRect(70,y,W-140,74,16); }
@@ -313,15 +315,16 @@ WS.ShopScene = class extends Phaser.Scene {
     menuBG(this);
     WS.shadow(this.add.text(MARGIN,20,"Shop",WS.T(26,"#FFF3DC",{strokeColor:"#3A5A2A",strokeWidth:5})),2);
     backButton(this,"home");
-    this.balTxt=this.add.text(W-MARGIN,28,"🪙 "+WS.Econ.balance(),{fontFamily:WS.FONT,fontSize:"20px",fontStyle:"bold",color:HEX(C.gold)}).setOrigin(1,0.5);
+    this.balTxt=this.add.text(W-MARGIN,28,""+WS.Econ.balance(),{fontFamily:WS.FONT,fontSize:"20px",fontStyle:"bold",color:HEX(C.gold)}).setOrigin(1,0.5);
+    if(this.textures.exists("ic_coin")) this.add.image(this.balTxt.x-this.balTxt.width-6,28,"ic_coin").setDisplaySize(20,20).setOrigin(1,0.5);
 
     let y=76;
 
     // ---- daily chest (free, variable reward, odds shown) ----
     const chestOpen=WS.Econ.chestAvailable();
     const cg=this.add.graphics(); cg.fillStyle(0xffffff,0.95); cg.fillRoundedRect(MARGIN,y,W-2*MARGIN,96,16);
-    this.add.text(MARGIN+16,y+22,chestOpen?"🎁 Daily chest":"🎁 Daily chest — come back tomorrow",
-      {fontFamily:WS.FONT,fontSize:"16px",fontStyle:"bold",color:HEX(chestOpen?C.ink:C.mute)});
+    iconText(this,MARGIN+16,y+30,"ic_gift",chestOpen?"Daily chest":"Daily chest — come back tomorrow",
+      {size:20,fontSize:16,color:HEX(chestOpen?C.ink:C.mute)});
     const odds=WS.Econ.chestOdds().map(o=>(o.reward==="power"?"power":o.amount+"c")+" "+o.pct+"%").join("  ·  ");
     this.add.text(MARGIN+16,y+46,odds,{fontFamily:WS.FONT,fontSize:"10px",color:HEX(C.mute)});
     if(chestOpen){
@@ -329,7 +332,7 @@ WS.ShopScene = class extends Phaser.Scene {
         const win=WS.Econ.openChest();
         if(!win) return;
         WS.Art.confetti(this,W/2,y+40,20);
-        this.toast(win.reward==="coins" ? ("🪙 +"+win.amount+" coins!") : "⚡ Free power on your next run!");
+        this.toast(win.reward==="coins" ? ("+"+win.amount+" coins!") : "Free power on your next run!");
         this.time.delayedCall(700,()=>this.scene.restart());
       },12);
     }
@@ -338,23 +341,23 @@ WS.ShopScene = class extends Phaser.Scene {
     // ---- pre-run booster (coin sink) ----
     const boosted=WS.store.get("pendingBooster",false);
     const bg2=this.add.graphics(); bg2.fillStyle(0xffffff,0.95); bg2.fillRoundedRect(MARGIN,y,W-2*MARGIN,62,14);
-    this.add.text(MARGIN+16,y+22,"⚡ Head start",{fontFamily:WS.FONT,fontSize:"15px",fontStyle:"bold",color:HEX(C.ink)});
-    this.add.text(MARGIN+16,y+42,"Begin your next run with ⚡"+WS.Econ.BOOSTER_ENERGY,{fontFamily:WS.FONT,fontSize:"11px",color:HEX(C.mute)});
+    iconText(this,MARGIN+16,y+22,"ic_bolt","Head start",{size:16,fontSize:15,color:HEX(C.ink),originY:0});
+    this.add.text(MARGIN+16,y+42,"Begin your next run with "+WS.Econ.BOOSTER_ENERGY+" energy",{fontFamily:WS.FONT,fontSize:"11px",color:HEX(C.mute)});
     if(boosted){
       this.add.text(W-MARGIN-16,y+31,"ARMED ✓",{fontFamily:WS.FONT,fontSize:"12px",fontStyle:"bold",color:HEX(C.teal)}).setOrigin(1,0.5);
     } else {
-      button(this,W-MARGIN-110,y+16,94,30,WS.Econ.BOOSTER_COST+" 🪙",C.gold,0xD9A32E,()=>{
+      button(this,W-MARGIN-110,y+16,94,30,""+WS.Econ.BOOSTER_COST,C.gold,0xD9A32E,()=>{
         if(!WS.Econ.spend(WS.Econ.BOOSTER_COST,"booster")) return this.toast("Not enough coins.");
         WS.store.set("pendingBooster",true);
         this.scene.restart();
-      },13);
+      },13,"ic_coin");
     }
     y+=78;
 
     // ---- remove ads ----
     if(!WS.Entitle.isPremium()){
       button(this,MARGIN,y,W-2*MARGIN,48,
-        "🚫 Remove ads — "+WS.IAP.priceOf(WS.MONETIZE.revenuecat.products.removeAds,"$4.99"),
+        "Remove ads — "+WS.IAP.priceOf(WS.MONETIZE.revenuecat.products.removeAds,"$4.99"),
         C.clay,C.clayD,async()=>{
           const r=await WS.IAP.buyRemoveAds();
           if(r.ok){ this.toast("Ads removed. Thank you!"); this.scene.restart(); }
@@ -370,14 +373,14 @@ WS.ShopScene = class extends Phaser.Scene {
     WS.Econ.PACKS.forEach(p=>{
       const g=this.add.graphics(); g.fillStyle(0xffffff,0.95); g.fillRoundedRect(MARGIN,y,W-2*MARGIN,52,14);
       if(p.best){ g.lineStyle(3,C.gold,1); g.strokeRoundedRect(MARGIN,y,W-2*MARGIN,52,14); }
-      this.add.text(MARGIN+16,y+26,"🪙 "+p.coins+"  "+p.label+(p.bonus?("  "+p.bonus):""),
-        {fontFamily:WS.FONT,fontSize:"15px",fontStyle:"bold",color:HEX(C.ink)}).setOrigin(0,0.5);
+      iconText(this,MARGIN+16,y+26,"ic_coin",p.coins+"  "+p.label+(p.bonus?("  "+p.bonus):""),
+        {size:18,fontSize:15,color:HEX(C.ink)});
       // priceOf falls back to the USD literal only when the store has not told
       // us the real localised price. Never charge a euro and print a dollar.
       const price=WS.IAP.priceOf(WS.MONETIZE.revenuecat.products[p.key],"$"+p.usd.toFixed(2));
       button(this,W-MARGIN-96,y+11,80,30,price,C.teal,C.tealD,async()=>{
         const r=await WS.IAP.buyCoins(p.key);
-        if(r.ok){ this.toast("🪙 +"+r.coins+" coins!"); this.scene.restart(); }
+        if(r.ok){ this.toast("+"+r.coins+" coins!"); this.scene.restart(); }
         else if(r.reason==="unavailable") this.toast("Purchases aren't available in this build.");
         else if(r.reason!=="cancelled")   this.toast("Purchase failed. You were not charged.");
       },13);

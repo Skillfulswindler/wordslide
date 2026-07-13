@@ -114,6 +114,12 @@ ${pieces(k)}
       vowels:`<circle cx="24" cy="24" r="15" fill="#FFE9A8" ${S}/><text x="24" y="30" font-family="Arial, sans-serif" font-size="17" font-weight="bold" text-anchor="middle" fill="#4A2E14">AE</text>`,
       purge: `<rect x="9" y="14" width="20" height="20" rx="5" fill="#FFFFFF" ${S}/><text x="19" y="29" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#4A2E14">Q</text><g ${S}><line x1="30" y1="24" x2="40" y2="24"/><path d="M36,19 L42,24 L36,29 Z" fill="#FFFFFF"/></g>`,
       golden:`<path d="M24,7 L28,18 L40,18 L30,25 L34,37 L24,29 L14,37 L18,25 L8,18 L20,18 Z" fill="#FBC85A" ${S}/><text x="24" y="28" font-family="Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#4A2E14">×2</text>`,
+      // ---- energy + economy glyphs (replace the pasted-on platform emoji) ----
+      bolt:  `<path d="M28,6 L12,27 L22,26 L20,42 L36,20 L25,21 Z" fill="#FFC336" ${S}/>`,
+      coin:  `<circle cx="24" cy="24" r="15" fill="#FFC336" ${S}/><circle cx="24" cy="24" r="10.5" fill="none" stroke="#E0A81E" stroke-width="2"/><text x="24" y="30" font-family="Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" fill="#4A2E14">W</text>`,
+      gift:  `<rect x="10" y="22" width="28" height="16" rx="2" fill="#F26C86" ${S}/><rect x="8" y="15" width="32" height="9" rx="2" fill="#FF9DB0" ${S}/><rect x="21" y="15" width="6" height="23" fill="#FFE0A0" stroke="none"/><path d="M24,15 C24,9 16,9 17,13 C18,16 24,15 24,15 Z" fill="#FFE9A8" ${S}/><path d="M24,15 C24,9 32,9 31,13 C30,16 24,15 24,15 Z" fill="#FFE9A8" ${S}/>`,
+      trophy:`<path d="M16,10 L32,10 L31,22 A7,7 0 0 1 17,22 Z" fill="#FBC85A" ${S}/><path d="M16,13 C10,13 10,22 17,21" fill="none" ${S}/><path d="M32,13 C38,13 38,22 31,21" fill="none" ${S}/><line x1="24" y1="27" x2="24" y2="31" ${S}/><rect x="18" y="31" width="12" height="4" rx="1.5" fill="#FBC85A" ${S}/><rect x="15" y="35" width="18" height="4" rx="1.5" fill="#E0A81E" ${S}/>`,
+      menu:  `<g ${S}><line x1="12" y1="15" x2="36" y2="15"/><line x1="12" y1="24" x2="36" y2="24"/><line x1="12" y1="33" x2="36" y2="33"/></g>`,
     };
     return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 48 48">${bodies[name]||bodies.play}</svg>`;
   },
@@ -122,7 +128,8 @@ ${pieces(k)}
     const m=[];
     Object.keys(PAL).forEach(k=>m.push({key:"bg_"+k, svg:this.scene(k)}));
     ["play","cal","chart","gear","duel","trash","flame","lock","home","share",
-     "slow","shuffle","vowels","purge","golden"].forEach(n=>m.push({key:"ic_"+n, svg:this.icon(n)}));
+     "slow","shuffle","vowels","purge","golden",
+     "bolt","coin","gift","trophy","menu"].forEach(n=>m.push({key:"ic_"+n, svg:this.icon(n)}));
     return m;
   },
 

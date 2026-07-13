@@ -246,6 +246,34 @@ but has no placement yet (wire a capped shop button or delete before it becomes
 a doc/code contradiction), bonus-square legibility check on device (colourblind
 claim rests on a ~3px glyph at 28px cells).
 
+## v2.5.2 — visual fix round (July 13, 2026 — HANDOFF/cowork-notes-03.md)
+
+Four owner-directed visual fixes:
+1. **Board is OPAQUE again.** The v7 "world glows through the empty cells"
+   experiment is revoked (milky wash + a pale block over the board). `buildBoard`
+   draws the cells and bonus tags at full alpha, the dark scrim is gone, and the
+   per-world `scrim:` values were removed from tuning.js (tile legibility now
+   rides on the opaque board). The "pale square" was `panel_frame.png`'s cream
+   centre — `WS.Art.hollowFrame` now ALWAYS punches a transparent centre (canvas
+   erase) on both the shipped and procedural paths, so a hollow frame is hollow
+   regardless of the source PNG.
+2. **No platform emoji in the UI.** New drawn icons in svgart.js
+   (`ic_bolt/coin/gift/trophy/menu`) replace every ⚡🪙🎁🏆☰ etc.; label rows use
+   an icon+text pair (`GameScene.iconNum`, `WS.ui.iconText`), toasts were reworded.
+   Emoji inside SHARE text (clipboard) stays.
+3. **Button skins parked.** The six `btn_*.png` + `btn_base.png` moved to
+   `art/parked/` (plank-photo 9-slice smeared through the middle) — buttons fall
+   back to the procedural bevel, which tints per world and reads clean. The
+   panels (`panel_frame/wood/tray`, `sign_wood`, `slot_empty`) passed the eyeball
+   test and stay.
+4. **"Climb the slide" map rebuilt.** `WS.Art.mapBackdrop` returns `bg_map` when
+   `assets/backgrounds/bg_map.jpg` is present (procedural fallback otherwise, with
+   its right-flank + sun bugs fixed). Node medallions are now a CIRCULAR CROP of
+   each world's own background (`WS.Art.mapNode` via canvas — accent ring, gloss,
+   desaturated + `ic_lock` when locked), the world number sits in a badge
+   bottom-right, and every label rides a translucent plate (`WS.Art.mapPlate`) so
+   it reads on snow / trail / paint. Trail footpath-dots removed; trail alpha 0.9.
+
 ## Roadmap / next
 
 1. Human playtest; tune pacing + tray drag feel on a real phone.

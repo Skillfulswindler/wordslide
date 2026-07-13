@@ -251,7 +251,8 @@ WS.GameScene = class extends Phaser.Scene {
     // menu
     const mx=W-MARGIN-70,my=SY+10,mw=70,mh=28;
     const mg=this.add.graphics(); mg.fillStyle(0xffffff,0.9); mg.fillRoundedRect(mx,my,mw,mh,9);
-    this.add.text(mx+mw/2,my+mh/2,"☰ Menu",{fontFamily:WS.FONT,fontSize:"12px",fontStyle:"bold",color:HEX(C.ink)}).setOrigin(0.5);
+    if(this.textures.exists("ic_menu")) this.add.image(mx+17,my+mh/2,"ic_menu").setDisplaySize(15,15).setOrigin(0.5);
+    this.add.text(mx+29,my+mh/2,"Menu",{fontFamily:WS.FONT,fontSize:"12px",fontStyle:"bold",color:HEX(C.ink)}).setOrigin(0,0.5);
     const mz=this.add.zone(mx,my,mw,mh).setOrigin(0).setInteractive();
     mz.on("pointerup",()=>{
       if(this.over) return;
@@ -296,19 +297,15 @@ WS.GameScene = class extends Phaser.Scene {
   buildBoard(){
     WS.Art.hollowFrame(this,"frame_board",BOARD_W+22,BOARD_H+22,18);
     this.add.image(BOARD_LEFT-11,BOARD_TOP-11,"frame_board").setOrigin(0);
-    // The board used to be fully opaque, which hid two thirds of the world art
-    // behind it — every background's set piece was invisible and all seven
-    // worlds looked identical. Now: a soft dark scrim for letter contrast, and
-    // the cell grid at 0.9 so the world glows faintly through the EMPTY cells.
-    // Placed tiles are opaque sprites on top, so legibility is untouched.
-    const scrim=this.add.graphics();
-    scrim.fillStyle(0x0D1426, this.cfg.scrim!=null?this.cfg.scrim:0.20);
-    scrim.fillRoundedRect(BOARD_LEFT-1,BOARD_TOP-1,BOARD_W+2,BOARD_H+2,6);
-    this.add.image(BOARD_LEFT-1,BOARD_TOP-1,WS.Art.board(this,this.cb)).setOrigin(0).setAlpha(0.82);   // let the painted world breathe through the empty cells
+    // The v7 "world glows through the empty cells" experiment is revoked: on real
+    // screens the translucent grid read as a milky wash and left a pale block over
+    // the board. The board is now fully OPAQUE — tile legibility rides on the board
+    // itself, not on a dark scrim — and each world's art frames it instead.
+    this.add.image(BOARD_LEFT-1,BOARD_TOP-1,WS.Art.board(this,this.cb)).setOrigin(0);
     for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
       const sq=WS.sqAt(r,c);
       if(sq&&sq.tag) this.add.text(this.cellX(c)+TILE/2,this.cellY(r)+TILE/2,sq.tag,
-        {fontFamily:WS.FONT,fontSize:sq.key==="ST"?"15px":"10px",fontStyle:"bold",color:HEX(sq.ink)}).setOrigin(0.5).setAlpha(0.85);
+        {fontFamily:WS.FONT,fontSize:sq.key==="ST"?"15px":"10px",fontStyle:"bold",color:HEX(sq.ink)}).setOrigin(0.5);
     }
     this.hintGfx=this.add.graphics().setDepth(15);
   }
@@ -371,7 +368,7 @@ WS.GameScene = class extends Phaser.Scene {
     const bx=DUMP.x+DUMP.w/2, byy=DUMP.y+17;
     if(this.textures.exists("ic_trash")) this.add.image(bx,byy,"ic_trash").setDisplaySize(26,26);
     else { d.fillStyle(0xA4451F,1); d.fillRect(bx-7,byy-4,14,12); d.fillRect(bx-9,byy-7,18,3); d.fillRect(bx-3,byy-10,6,3); }
-    this.add.text(bx,DUMP.y+38,"⚡"+DUMP_COST,{fontFamily:WS.FONT,fontSize:"10px",fontStyle:"bold",color:HEX(C.clayD)}).setOrigin(0.5);
+    this.iconNum(bx-1,DUMP.y+38,"ic_bolt",DUMP_COST,11,HEX(C.clayD),10);
   }
   slotX(i){ const w=(BOARD_W-(TRAY_SIZE-1)*TRAY_GAP)/TRAY_SIZE; return TRAY_X+i*(w+TRAY_GAP)+(w-TRAY_TILE)/2 + (w>TRAY_TILE?0:0); }
   slotCenter(i){ return {x:this.slotX(i)+TRAY_TILE/2, y:TRAY_Y+TRAY_TILE/2}; }
@@ -640,7 +637,7 @@ WS.GameScene = class extends Phaser.Scene {
         this.refreshPreview();
         return;
       }
-      this.toast("Need ⚡"+DUMP_COST+" to toss");
+      this.toast("Need "+DUMP_COST+" energy to toss");
     }
     this.returnToTray(t);
   }
@@ -849,7 +846,8 @@ WS.GameScene = class extends Phaser.Scene {
     ov.add(this.add.image(cx,cy,"card_lvl").setOrigin(0));
     ov.add(this.add.text(W/2,cy+40,"Level "+this.level+" cleared!",{fontFamily:WS.FONT,fontSize:"28px",fontStyle:"bold",color:HEX(this.cfg.accentD)}).setOrigin(0.5));
     ov.add(this.add.text(W/2,cy+80,"Run score: "+this.score,{fontFamily:WS.FONT,fontSize:"15px",fontStyle:"bold",color:HEX(C.ink)}).setOrigin(0.5));
-    ov.add(this.add.text(W/2,cy+104,"🪙 +"+coins+" coins",{fontFamily:WS.FONT,fontSize:"16px",fontStyle:"bold",color:HEX(C.gold)}).setOrigin(0.5));
+    ov.add(this.add.text(W/2+4,cy+104,"+"+coins+" coins",{fontFamily:WS.FONT,fontSize:"16px",fontStyle:"bold",color:HEX(C.gold)}).setOrigin(0,0.5));
+    if(this.textures.exists("ic_coin")) ov.add(this.add.image(W/2-6,cy+104,"ic_coin").setDisplaySize(18,18).setOrigin(1,0.5));
     const nl=this.level+1;
     ov.add(this.add.text(W/2,cy+130,"Next: faster slide · only "+WS.allowedLosses(nl)+" letters may fall",{fontFamily:WS.FONT,fontSize:"12px",color:HEX(C.mute)}).setOrigin(0.5));
     const bw=200,bh=52,bx=W/2-bw/2,by=cy+chh-80;
@@ -992,7 +990,8 @@ WS.GameScene = class extends Phaser.Scene {
     this.recallBtn=this.makeButton(MARGIN,by,rw,bh,"↩ Recall",C.teal,C.tealD,()=>this.recallAll());
     this.playBtn=this.makeButton(MARGIN+rw+10,by,pw,bh,"Play word",cfg.accent,cfg.accentD,()=>this.submit());
     // powers
-    this.energyTxt=this.add.text(W-MARGIN,WS.POWERS_LABEL_Y,"⚡ 0",{fontFamily:WS.FONT,fontSize:"13px",fontStyle:"bold",color:HEX(cfg.accentD)}).setOrigin(1,0);
+    this.energyTxt=this.add.text(W-MARGIN,WS.POWERS_LABEL_Y,"0",{fontFamily:WS.FONT,fontSize:"13px",fontStyle:"bold",color:HEX(cfg.accentD)}).setOrigin(1,0);
+    this.energyIcon=this.textures.exists("ic_bolt")?this.add.image(W-MARGIN,WS.POWERS_LABEL_Y+8,"ic_bolt").setDisplaySize(15,15).setOrigin(1,0.5):null;
     this.add.text(MARGIN,WS.POWERS_LABEL_Y,"POWERS",{fontFamily:WS.FONT,fontSize:"10px",fontStyle:"bold",color:HEX(C.mute)});
     const n=WS.POWERS.length, gap=6, pw2=(W-2*MARGIN-(n-1)*gap)/n, py=WS.POWERS_Y, ph=WS.POWERS_H;
     this.powerBtns=[];
@@ -1007,10 +1006,11 @@ WS.GameScene = class extends Phaser.Scene {
       } else {
         nt=this.add.text(x+pw2/2,py+12,p.name,{fontFamily:WS.FONT,fontSize:"11px",fontStyle:"bold",color:"#ffffff"}).setOrigin(0.5);
       }
-      const ct=this.add.text(x+pw2/2,py+29,"⚡"+p.cost,{fontFamily:WS.FONT,fontSize:"10px",color:"#ffffff"}).setOrigin(0.5);
+      const pair=this.iconNum(x+pw2/2-1,py+30,"ic_bolt",p.cost,11,"#ffffff",10);
+      const ct=pair.txt, cbolt=pair.ico;
       const z=this.add.zone(x,py,pw2,ph).setOrigin(0).setInteractive();
       z.on("pointerup",()=>this.usePower(p));
-      this.powerBtns.push({p,g,nt,ct,ico,x,py,pw:pw2,ph});
+      this.powerBtns.push({p,g,nt,ct,cbolt,ico,x,py,pw:pw2,ph});
     });
   }
   makeButton(x,y,w,h,label,fill,shadow,cb){
@@ -1055,14 +1055,23 @@ WS.GameScene = class extends Phaser.Scene {
     g.lineStyle(3,sh,0.9); g.strokeRoundedRect(x+1.5,y+1.5,w-3,h+1,15);
     btn.t.setColor(on?"#ffffff":"#f4f6f8"); btn.t.setStroke(WS.HEX(sh),4);
   }
+  // small drawn-icon + number pair (replaces pasted-on ⚡ emoji). Icon is
+  // right-anchored at x, number runs off to the right; roughly centres on x.
+  iconNum(x,y,iconKey,val,size,color,fontSize){
+    const ico=this.textures.exists(iconKey)?this.add.image(x,y,iconKey).setDisplaySize(size,size).setOrigin(1,0.5):null;
+    const txt=this.add.text(x+3,y,""+val,{fontFamily:WS.FONT,fontSize:(fontSize||10)+"px",fontStyle:"bold",color:color||"#ffffff"}).setOrigin(0,0.5);
+    return {ico,txt};
+  }
   updateEnergy(){
-    this.energyTxt.setText(this.freePower ? "⚡ FREE" : "⚡ "+this.energy);
+    this.energyTxt.setText(this.freePower ? "FREE" : ""+this.energy);
+    if(this.energyIcon) this.energyIcon.x = this.energyTxt.x - this.energyTxt.width - 4;
     this.powerBtns.forEach(b=>{
       // a banked free power makes EVERY power affordable, so they must all light up
       const on=this.freePower || this.energy>=b.p.cost;
       b.g.clear(); b.g.fillStyle(on?b.p.color:0xC9D0D6,1); b.g.fillRoundedRect(b.x,b.py,b.pw,b.ph,11);
       if(b.nt) b.nt.setAlpha(on?1:0.7);
       if(b.ico) b.ico.setAlpha(on?1:0.7);
+      if(b.cbolt) b.cbolt.setAlpha(on?1:0.7);
       b.ct.setAlpha(on?1:0.7);
     });
   }
@@ -1073,7 +1082,7 @@ WS.GameScene = class extends Phaser.Scene {
     const free = !!this.freePower;
     if(!free && this.energy<p.cost) return;
     this.dropCarry();
-    if(free){ this.freePower=false; this.toast("🎁 Free power — from the chest!"); }
+    if(free){ this.freePower=false; this.toast("Free power — from the chest!"); }
     else     { this.energy-=p.cost; }
     this.beep(620,0.09,"triangle",0.05); WS.buzz(24);
     WS.Analytics.track("power_used",{ power:p.key, cost:free?0:p.cost });
@@ -1187,7 +1196,7 @@ WS.GameScene = class extends Phaser.Scene {
       WS.goals.bump("game",1,()=>{});
       WS.goals.bump("runScore",this.score,()=>{});
       xpRes=WS.addXP(this.score/10 + this.words*2);
-      this.time.delayedCall(300,()=>WS.checkAchievements(a=>{ this.toast("🏆 "+a.name+"!  +"+WS.ACH_XP+" XP"); WS.Art.confetti(this,W/2,H*0.3,20); }));
+      this.time.delayedCall(300,()=>WS.checkAchievements(a=>{ this.toast("Unlocked: "+a.name+"!  +"+WS.ACH_XP+" XP"); WS.Art.confetti(this,W/2,H*0.3,20); }));
       if(this.mode==="daily"){ daily=WS.store.playDaily(WS.todayKey(),this.score); }
       else if(this.mode==="classic"){ isBest=WS.store.setBest(this.cfg.key,this.score); WS.store.setBestLevel(this.cfg.key,this.level); }
 
@@ -1227,7 +1236,7 @@ WS.GameScene = class extends Phaser.Scene {
 
     add(this.add.text(W/2,cy+30,reason==="time"?"Time!":"Buried!",{fontFamily:WS.FONT,fontSize:"30px",fontStyle:"bold",color:HEX(this.cfg.accentD)}).setOrigin(0.5));
     const sub=this.mode==="daily"
-      ? ("Daily "+WS.todayKey()+(daily?("  ·  🔥 "+daily.streak+"-day streak"):""))
+      ? ("Daily "+WS.todayKey()+(daily?("  ·  "+daily.streak+"-day streak"):""))
       : (this.cfg.name+"  ·  reached level "+this.level+(isBest?"  —  NEW BEST!":""));
     add(this.add.text(W/2,cy+64,sub,{fontFamily:WS.FONT,fontSize:"13px",fontStyle:"bold",color:HEX(C.teal)}).setOrigin(0.5));
     add(this.add.text(W/2,cy+110,""+this.score,{fontFamily:WS.FONT,fontSize:"50px",fontStyle:"bold",color:HEX(C.ink)}).setOrigin(0.5));
@@ -1278,7 +1287,7 @@ WS.GameScene = class extends Phaser.Scene {
 
       if (canAd){
         mkBtn(cx+30,rowY,cardW-60,C.gold,0xD9A32E,
-          near ? "🎬 So close! Second Wind (ad)" : "🎬 Second Wind — reset the meter (ad)",
+          near ? "So close! Second Wind (ad)" : "Second Wind — reset the meter (ad)",
           ()=>{
             this.secondWindUsed=true;
             WS.Analytics.track("offer_accepted",{ offer:"continue", context:near?"near_miss":"results" });
@@ -1291,7 +1300,7 @@ WS.GameScene = class extends Phaser.Scene {
         // they can already afford it — dangling a price they cannot pay is just
         // an advert for the coin shop dressed up as a rescue.
         mkBtn(cx+30,rowY,cardW-60,C.gold,0xD9A32E,
-          "🪙 Second Wind — "+WS.Econ.CONTINUE_COST+" coins",()=>{
+          "Second Wind — "+WS.Econ.CONTINUE_COST+" coins",()=>{
             if (!WS.Econ.spend(WS.Econ.CONTINUE_COST,"continue")) return this.toast("Not enough coins.");
             this.secondWindUsed=true;
             WS.Analytics.track("offer_accepted",{ offer:"continue", context:"coins" });
