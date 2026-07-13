@@ -149,5 +149,51 @@ console.log("\nVALIDATEMOVE -- cross-words");
   ok("one invalid incidental cross-word rejects the play", bad.valid === false, bad.reason);
 }
 
+console.log("\nSWEEP -- provisional tiles are not a safe harbour");
+{
+  // the knob is pure and lives in tuning.js
+  eq("SWEEP_S L1 = 25s", WS.SWEEP_S(1), 25);
+  eq("SWEEP_S L14 floors at 12s", WS.SWEEP_S(14), 12);
+  eq("SWEEP_S L30 stays at the floor", WS.SWEEP_S(30), 12);
+
+  // behavioural: drive the real sweepProvisional() on a bare scene, stubbing the
+  // side-effecting collaborators. One tick = 250ms, exactly as service() calls it.
+  const s = scene();
+  s.level = 1; s.sweptOnce = true;
+  const lost = [];
+  s.loseTile      = t => { s.prov = s.prov.filter(x => x !== t); lost.push(t); };
+  s.burnEmber     = t => { s.prov = s.prov.filter(x => x !== t); s.burned.push(t); };
+  s.startSweepWarn = () => {};
+  s.clearSweepWarn = () => {};
+  s.toast = () => {}; s.refreshPreview = () => {};
+  s.burned = [];
+  const ticksPerSweep = WS.SWEEP_S(1) * 1000 / 250;      // 100
+
+  const parked = tile("q",5,5);
+  s.prov = [parked];
+  for (let i=0;i<ticksPerSweep-1;i++) s.sweepProvisional();
+  ok("parked tile survives right up to the timeout", lost.length===0 && parked.sweepMs===(ticksPerSweep-1)*250);
+  s.sweepProvisional();
+  ok("parked tile is swept once the timeout passes", lost.length===1 && lost[0]===parked);
+
+  // recall (re-arm) resets the clock — it survives a second nearly-full cycle
+  const p2 = tile("z",6,6);
+  s.prov = [p2];
+  for (let i=0;i<ticksPerSweep-5;i++) s.sweepProvisional();
+  s.armSweep(p2);                                          // recall + re-place
+  for (let i=0;i<ticksPerSweep-1;i++) s.sweepProvisional();
+  ok("recall resets the sweep timer", s.prov.includes(p2));
+  s.sweepProvisional();
+  ok("re-parked tile is swept only after a full fresh timeout", !s.prov.includes(p2));
+
+  // a provisional ember keeps burning (the fuse-freeze exploit is closed)
+  const emb = tile("e",4,4,{ember:true, fuse:500});
+  s.prov = [emb];
+  s.sweepProvisional();
+  ok("provisional ember fuse ticks down while on the board", emb.fuse===250 && s.burned.length===0);
+  s.sweepProvisional();
+  ok("provisional ember burns away (a lost letter) when its fuse expires", s.burned.length===1 && s.burned[0]===emb);
+}
+
 console.log("\n"+pass+" passed, "+fail+" failed\n");
 process.exit(fail ? 1 : 0);

@@ -274,6 +274,35 @@ Four owner-directed visual fixes:
    bottom-right, and every label rides a translucent plate (`WS.Art.mapPlate`) so
    it reads on snow / trail / paint. Trail footpath-dots removed; trail alpha 0.9.
 
+## v2.5.3 — parking exploit + Home art on the map (HANDOFF/cowork-notes-04.md)
+
+Two owner-directed work orders, shipped before the Android Studio session:
+
+1. **The slide sweeps loose tiles.** Provisional tiles (dragged/tapped onto the
+   board but never played) were a safe harbour — outside the tray, they could
+   never be pushed off, so classic mode's fail state was dodgeable by parking
+   every letter. Now a provisional tile left too long is swept off and counts as
+   a lost letter: `WS.SWEEP_S(level) = max(12, 26-level)` seconds (tuning.js),
+   advanced per-tick in `service()` (so it freezes while `!running` / paused /
+   mid-entry). At 65% the tile wobbles + a red ring pulses (`startSweepWarn`); on
+   expiry it routes through `loseTile(tile,"swept")` (generalised to pull the tile
+   from `prov` OR `tray` + dust via `WS.Juice.sparks`), meter++, `tile_lost`,
+   endRun check. First sweep of a run toasts once. Same pass fixes the ember
+   freeze: prov embers keep burning in `sweepProvisional` (`burnEmber` shared by
+   tray + board); the fuse still stops permanently on COMMIT. Committed tiles are
+   NEVER swept. `armSweep` (re)starts the clock on every placement path; recall /
+   re-grab / commit clear the warning. Tests: 9 new cases in `validate.test.mjs`
+   (SWEEP_S values, parked→swept after timeout, recall resets, prov ember burns).
+
+2. **Map backdrop = the Home mountain shot.** `Background Images/Home.png` (the
+   grand establishing shot; note the committed `bg_home.jpg` is the OLDER jungle
+   art, so map and menu are NOT duplicates) imported via `art/import_map.py`
+   (import_bgs.py pattern: cover-fit 960×1708 JPEG q88, but ZOOMED 1.15 + anchored
+   LOWER so the map shows foothills the menu doesn't) → `assets/backgrounds/bg_map.jpg`.
+   `WS.Art.mapBackdrop` already prefers `bg_map`. Legibility pass: the tan trail
+   was blending into the golden rock, so `mapTrail` gained a dark under-glow
+   (0x241708 halo) + a darker edge — it now reads base→summit over the painting.
+
 ## Roadmap / next
 
 1. Human playtest; tune pacing + tray drag feel on a real phone.

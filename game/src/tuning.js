@@ -44,6 +44,11 @@ const WS = (window.WS = window.WS || {});
    down to a floor of 3. Left alone deliberately. */
 WS.levelTarget   = l => 130 + 45*(l-1);          // score needed to clear level l
 WS.allowedLosses = l => Math.max(3, 11 - l);     // letters you may lose on level l
+// Seconds a provisional (placed-but-unplayed) tile may sit on the board before
+// "the slide sweeps it" and it counts as a lost letter. Closes the parking cheat
+// (letters parked on the board are outside the tray, so overflow never claims
+// them). Tightens as the slide speeds up: L1 = 25s (generous), floor 12s at L14+.
+WS.SWEEP_S       = l => Math.max(12, 26 - l);
 
 /* ---- worlds -------------------------------------------------------------
    dropEvery : ms between tumbling letters at level 1

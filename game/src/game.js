@@ -38,6 +38,7 @@ WS.GameScene = class extends Phaser.Scene {
     this.board=[]; for(let r=0;r<ROWS;r++) this.board.push(new Array(COLS).fill(null));
     this.tray=[];                 // left→right; new letters enter at index 0
     this.prov=[];                 // provisional placements: tiles with .r/.c set
+    this.sweptOnce=false;         // teach the sweep-away toast only once per run
     this.firstMove=true;
     this.score=0; this.levelScore=0; this.level=this.startLevel; this.words=0;
     this.combo=0; this.comboUntil=0; this.topCombo=0; this.tilesPlayed=0;
@@ -494,11 +495,19 @@ WS.GameScene = class extends Phaser.Scene {
       this.tweens.add({targets:tile.spin,angle:0,duration:180,ease:"Quad.easeOut"});
     });
   }
+  // A lost letter. Works for a tray tile (pushed off the edge) OR a provisional
+  // board tile (swept away) — remove it from whichever list holds it so every
+  // loss path funnels through here. Dust puff + slide off, meter++, endRun check.
   loseTile(tile,why){
+    this.prov=this.prov.filter(x=>x!==tile);
+    this.tray=this.tray.filter(x=>x!==tile);
+    this.clearSweepWarn(tile);
     tile.inTray=false; tile.lost=true; tile.cont.name="lost";   // flies off-screen by design
+    WS.Juice.sparks(this, tile.cont.x+tile.T/2, tile.cont.y+tile.T/2, 6);   // dust
     this.dragLayer.add(tile.cont);
     this.tweens.add({targets:tile.cont, x:W+60, y:TRAY_Y+140, angle:Phaser.Math.Between(160,320),
       duration:520, ease:"Quad.easeIn", onComplete:()=>tile.cont.destroy()});
+    this.reflowTray();
     this.lost++;
     this.updateMeter();
     WS.Analytics.track("tile_lost",{ world:this.cfg.key, level:this.level });
@@ -506,6 +515,69 @@ WS.GameScene = class extends Phaser.Scene {
     this.cameras.main.shake(120,0.004);
     if(this.lost>=this.allowed) this.endRun("letters");
     else if(this.allowed-this.lost===3) this.toast("Careful — 3 letters left!");
+  }
+
+  // ---- the slide sweeps loose (provisional) tiles ----
+  // Called once per service() tick (every 250ms, only while running). A tile
+  // placed on the board but never played is swept off after SWEEP_S(level)
+  // seconds and counts as lost — parking on the board is not a safe harbour.
+  // Provisional embers keep burning here too, so dragging one out of the tray
+  // can't freeze its fuse.
+  sweepProvisional(){
+    if(!this.prov || !this.prov.length) return;
+    const sweepMs = WS.SWEEP_S(this.level)*1000;
+    this.prov.slice().forEach(t=>{
+      if(t.ember && t.fuse>0){
+        t.fuse-=250;
+        if(t.fuseTxt) t.fuseTxt.setText(""+Math.ceil(Math.max(0,t.fuse)/1000));
+        if(t.fuse<=0){ this.burnEmber(t); return; }
+      }
+      t.sweepMs=(t.sweepMs||0)+250;
+      if(t.sweepMs>=sweepMs){
+        if(!this.sweptOnce){ this.sweptOnce=true; this.toast("Swept away! Loose letters don't last."); }
+        this.loseTile(t,"swept");
+        return;
+      }
+      if(!t.sweepWarn && t.sweepMs>=sweepMs*0.65) this.startSweepWarn(t);
+    });
+    this.refreshPreview();
+  }
+  // (re)start a tile's sweep timer when it lands provisionally on the board
+  armSweep(t){ t.sweepMs=0; this.clearSweepWarn(t); }
+  // the "you're about to lose this" warning: the tile wobbles and a red ring pulses
+  startSweepWarn(t){
+    if(t.sweepWarn) return;
+    t.sweepWarn=true;
+    if(t.spin) t._sweepTween=this.tweens.add({targets:t.spin,angle:{from:-8,to:8},duration:130,yoyo:true,repeat:-1,ease:"Sine.easeInOut"});
+    const g=this.add.graphics().setDepth(19);
+    g.lineStyle(3,0xE24B4A,1); g.strokeRoundedRect(this.cellX(t.c)-2,this.cellY(t.r)-2,TILE+4,TILE+4,5);
+    t._sweepRing=g;
+    t._sweepRingTween=this.tweens.add({targets:g,alpha:{from:0.35,to:1},duration:340,yoyo:true,repeat:-1,ease:"Sine.easeInOut"});
+    this.beep(300,0.05,"triangle",0.03);
+  }
+  clearSweepWarn(t){
+    if(!t) return;
+    t.sweepWarn=false;
+    if(t._sweepTween){ t._sweepTween.stop(); t._sweepTween=null; }
+    if(t._sweepRingTween){ t._sweepRingTween.stop(); t._sweepRingTween=null; }
+    if(t._sweepRing){ t._sweepRing.destroy(); t._sweepRing=null; }
+    if(t.spin) t.spin.angle=0;
+  }
+  // an ember (in the tray OR provisional on the board) burns away = a lost letter
+  burnEmber(t){
+    this.tray=this.tray.filter(x=>x!==t);
+    this.prov=this.prov.filter(x=>x!==t);
+    this.clearSweepWarn(t);
+    const x=t.cont.x+t.T/2,y=t.cont.y+t.T/2;
+    for(let i=0;i<8;i++){ const p=this.add.circle(x,y,Phaser.Math.Between(2,4),0xF06236).setDepth(310);
+      this.tweens.add({targets:p,x:x+Phaser.Math.Between(-40,40),y:y-Phaser.Math.Between(10,50),alpha:0,duration:420,onComplete:()=>p.destroy()}); }
+    t.cont.destroy();
+    this.toast("Ember burned away!");
+    this.reflowTray();
+    this.lost++; this.updateMeter();
+    WS.Analytics.track("tile_lost",{ world:this.cfg.key, level:this.level });
+    this.beep(110,0.25,"sawtooth",0.06);
+    if(this.lost>=this.allowed) this.endRun("letters");
   }
 
   // ================= drag & drop =================
@@ -517,7 +589,7 @@ WS.GameScene = class extends Phaser.Scene {
       const c=this.carry;
       if(cell && !this.occupied(cell.r,cell.c) && !this.boulderAt(cell.r,cell.c)){
         this.carry=null;
-        c.r=cell.r; c.c=cell.c; this.prov.push(c);
+        c.r=cell.r; c.c=cell.c; this.prov.push(c); this.armSweep(c);
         this.tileLayer.add(c.cont);
         const sc=TILE/c.T;
         this.tweens.add({targets:c.cont,x:this.cellX(cell.c),y:this.cellY(cell.r),scaleX:sc,scaleY:sc,duration:130,ease:"Quad.easeOut"});
@@ -557,6 +629,7 @@ WS.GameScene = class extends Phaser.Scene {
     return p.x>=b.x-8 && p.x<=b.x+w+8 && p.y>=b.y-8 && p.y<=b.y+w+8;
   }
   grab(tile,p){
+    this.clearSweepWarn(tile);              // picking a parked tile back up resets its sweep timer
     this.drag=tile; this.dragPt={x:p.x,y:p.y};
     this.downAt={x:p.x,y:p.y,t:this.time.now};
     this.dragLayer.add(tile.cont);
@@ -616,7 +689,7 @@ WS.GameScene = class extends Phaser.Scene {
     if(cell){
       // place provisionally on the board
       t.r=cell.r; t.c=cell.c;
-      this.prov.push(t);
+      this.prov.push(t); this.armSweep(t);
       this.tileLayer.add(t.cont);
       const sc=TILE/t.T;
       // shrink INTO the cell as it travels, then land with weight
@@ -644,7 +717,7 @@ WS.GameScene = class extends Phaser.Scene {
   returnToTray(t){
     if(this.tray.length>=TRAY_SIZE){
       // no room (tray refilled while tile was out) — bounce back to board if it was there
-      if(t.r>=0 && !this.occupied(t.r,t.c)){ this.prov.push(t); this.tileLayer.add(t.cont);
+      if(t.r>=0 && !this.occupied(t.r,t.c)){ this.prov.push(t); this.armSweep(t); this.tileLayer.add(t.cont);
         const sc=TILE/t.T;
         this.tweens.add({targets:t.cont,x:this.cellX(t.c),y:this.cellY(t.r),scaleX:sc,scaleY:sc,duration:140});
         this.refreshPreview(); return;
@@ -660,7 +733,7 @@ WS.GameScene = class extends Phaser.Scene {
     this.dropCarry();
     if(!this.prov.length) return;
     const back=this.prov.slice(); this.prov=[];
-    back.forEach(t=>{ if(this.tray.length<TRAY_SIZE){ t.r=-1;t.c=-1; this.tray.push(t); } else this.prov.push(t); });
+    back.forEach(t=>{ this.clearSweepWarn(t); if(this.tray.length<TRAY_SIZE){ t.r=-1;t.c=-1; this.tray.push(t); } else this.prov.push(t); });
     this.reflowTray(); this.refreshPreview();
     this.beep(260,0.06,"sine",0.04);
   }
@@ -765,6 +838,7 @@ WS.GameScene = class extends Phaser.Scene {
     // commit tiles to the board
     let bonusCovered=0;
     cells.forEach(t=>{
+      this.clearSweepWarn(t);                                          // committed tiles are safe forever
       this.board[t.r][t.c]=t; t.inTray=false;
       if(WS.sqAt(t.r,t.c)) bonusCovered++;
       t.cont.x=this.cellX(t.c); t.cont.y=this.cellY(t.r);
@@ -892,26 +966,15 @@ WS.GameScene = class extends Phaser.Scene {
     if(!this.running) return;
     // volcano: embers burn down while in the tray
     if(this.cfg.emberChance){
-      const burnt=[];
-      this.tray.forEach(t=>{
+      this.tray.slice().forEach(t=>{
         if(t.ember){ t.fuse-=250;
           if(t.fuseTxt) t.fuseTxt.setText(""+Math.ceil(Math.max(0,t.fuse)/1000));
-          if(t.fuse<=0) burnt.push(t);
+          if(t.fuse<=0) this.burnEmber(t);
         }
       });
-      burnt.forEach(t=>{
-        this.tray=this.tray.filter(x=>x!==t);
-        const x=t.cont.x+t.T/2,y=t.cont.y+t.T/2;
-        for(let i=0;i<8;i++){ const p=this.add.circle(x,y,Phaser.Math.Between(2,4),0xF06236).setDepth(310);
-          this.tweens.add({targets:p,x:x+Phaser.Math.Between(-40,40),y:y-Phaser.Math.Between(10,50),alpha:0,duration:420,onComplete:()=>p.destroy()}); }
-        t.cont.destroy();
-        this.toast("Ember burned away!");
-        this.reflowTray();
-        this.lost++; this.updateMeter();
-        this.beep(110,0.25,"sawtooth",0.06);
-        if(this.lost>=this.allowed) this.endRun("letters");
-      });
     }
+    // the slide sweeps loose tiles parked on the board (+ keeps prov embers burning)
+    this.sweepProvisional();
     this.updateHUD();
   }
   // landslide boulders — tumble down and land on a random empty board square

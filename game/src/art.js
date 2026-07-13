@@ -478,10 +478,13 @@ WS.Art={
     path.push(pts[pts.length-1]);
     const g=scene.make.graphics({add:false});
     const blob=(col,alpha,r,dy)=>{ g.fillStyle(col,alpha); for(const p of path) g.fillCircle(p.x,p.y+(dy||0),r); };
-    blob(0x000000,0.12,15,4);      // soft shadow
-    blob(0x9C7B4C,1,14,0);         // trail edge (darker)
-    blob(0xE7CF9E,1,11,0);         // trail body (tan)
-    blob(0xF6EBC9,0.9,6,0);        // inner highlight
+    // dark under-glow FIRST — a brown-black halo that separates the path from the
+    // warm golden rock of the painted backdrop (the tan trail alone blended in).
+    blob(0x241708,0.55,19,3);      // wide soft under-glow
+    blob(0x000000,0.18,15,4);      // tight shadow
+    blob(0x6E4A22,1,14,0);         // darker edge (was 0x9C7B4C — too close to the gold)
+    blob(0xE7CF9E,1,10.5,0);       // trail body (tan)
+    blob(0xFBF0CE,0.95,6,0);       // inner highlight
     // (footpath dots removed — they cut through the node labels)
     g.generateTexture(key,W,H); g.destroy();
     return key;
