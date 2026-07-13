@@ -259,8 +259,11 @@ WS.checkAchievements=function(onEarn){
 // ---- external links + legal ----
 // Both stores require a reachable privacy-policy URL, and it must be linked from
 // inside the app as well as from the store listing.
-WS.PRIVACY_URL = "https://nickpotter.github.io/wordslide/privacy.html";
-WS.TERMS_URL   = "https://nickpotter.github.io/wordslide/terms.html";
+// Live on GitHub Pages from the docs/ folder of Skillfulswindler/wordslide.
+// The Pages HOSTNAME is lowercase even though the GitHub login is capitalised —
+// getting that wrong is a silent 404 on the one link a store reviewer clicks.
+WS.PRIVACY_URL = "https://skillfulswindler.github.io/wordslide/privacy.html";
+WS.TERMS_URL   = "https://skillfulswindler.github.io/wordslide/terms.html";
 WS.SUPPORT_EMAIL = "nick.potter.one@gmail.com";
 WS.openURL = function(url){
   try{

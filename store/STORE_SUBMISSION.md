@@ -79,20 +79,22 @@ reason, not a warning. Do not "simplify" that ordering.
 
 ---
 
-### A3. The URLs (both stores require a live, public policy URL)
+### A3. The URLs (both stores require a live, public policy URL) — ✅ LIVE
 
 ```
-Privacy:  https://<your-github-username>.github.io/wordslide/privacy.html
-Terms:    https://<your-github-username>.github.io/wordslide/terms.html
+Privacy:  https://skillfulswindler.github.io/wordslide/privacy.html
+Terms:    https://skillfulswindler.github.io/wordslide/terms.html
 ```
 
-**To publish (5 minutes):** create a public GitHub repo named `wordslide`, push the `docs/` folder,
-then *Settings → Pages → Source: `main` branch, `/docs` folder*.
+Published from the `docs/` folder of the public repo `Skillfulswindler/wordslide`
+(GitHub Pages, `main` branch, `/docs`). These are the URLs to paste into **both** store
+listings, and they match `WS.PRIVACY_URL` / `WS.TERMS_URL` in `src/worlds.js`.
 
-⚠️ **Then fix the URL in the code.** `src/worlds.js` currently has
-`WS.PRIVACY_URL = "https://nickpotter.github.io/wordslide/privacy.html"` — a **guess** at your
-username. Confirm it, and correct it if wrong. A privacy link that 404s from inside the app is a
-rejection, and it is a very silly one to earn.
+Note the Pages hostname is **lowercase** (`skillfulswindler`) even though the GitHub
+login is capitalised (`Skillfulswindler`). Use the lowercase form everywhere.
+
+⚠️ If you ever rename the repo or the account, these break — and an in-app privacy link
+that 404s is a store rejection. Re-check them at every submission.
 
 ---
 
