@@ -1,0 +1,21 @@
+{
+  "appId": "com.wordslide.game",
+  "appName": "Wordslide",
+  "webDir": "dist",
+  "backgroundColor": "#8FD6EC",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#8FD6EC"
+  },
+  "android": {
+    "backgroundColor": "#8FD6EC",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "backgroundColor": "#8FD6EC",
+      "launchAutoHide": true,
+      "showSpinner": false
+    }
+  }
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wordslide — Spell fast. Before it falls.</title>
+<meta name="description" content="Wordslide is a mobile word game. Letters tumble down the mountain into your tray. Spell words on the board before they slide away.">
+<meta property="og:title" content="Wordslide — Spell fast. Before it falls.">
+<meta property="og:description" content="A word game with a clock made of falling letters.">
+<meta property="og:image" content="feature.png">
+<style>
+  :root{--ink:#233A4F;--mute:#6C7A89;--teal:#0FB8B0;--clay:#E0561F;--cream:#FFF7E8;
+        --sky:#8FD6EC;--line:#E3E9EE;--gold:#ECC25A;--gold-d:#C99A3E;--tink:#4A2E14}
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--ink);background:var(--cream);
+       font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .hero{background:linear-gradient(180deg,var(--sky) 0%, #E8F6FB 100%);padding:64px 24px 0;position:relative;overflow:hidden}
+  .hero-in{max-width:900px;margin:0 auto;text-align:center;position:relative;z-index:2}
+  .logo{font-size:64px;font-weight:800;letter-spacing:-1.5px;margin:0;
+        text-shadow:0 3px 0 #fff,0 -2px 0 #fff,2px 0 0 #fff,-2px 0 0 #fff}
+  .logo .a{color:var(--teal)} .logo .b{color:var(--clay)}
+  .tag{font-size:22px;font-weight:600;margin:10px 0 26px;color:var(--ink)}
+  .tiles{display:flex;gap:10px;justify-content:center;margin:30px 0 0;padding-bottom:56px}
+  .tile{width:62px;height:62px;border-radius:12px;background:var(--gold);
+        box-shadow:0 5px 0 var(--gold-d),0 8px 14px rgba(40,20,0,.18);
+        display:flex;align-items:center;justify-content:center;
+        font-size:30px;font-weight:800;color:var(--tink);position:relative}
+  .tile::after{content:"";position:absolute;top:6px;left:7px;right:7px;height:9px;
+               border-radius:5px;background:rgba(255,255,255,.35)}
+  .tile:nth-child(1){transform:rotate(-6deg)} .tile:nth-child(2){transform:rotate(3deg) translateY(4px)}
+  .tile:nth-child(3){transform:rotate(-2deg)} .tile:nth-child(4){transform:rotate(5deg) translateY(3px)}
+  .tile:nth-child(5){transform:rotate(-4deg)}
+  .wrap{max-width:760px;margin:0 auto;padding:52px 24px 70px}
+  h2{font-size:24px;margin:0 0 14px}
+  .lead{font-size:18px;color:#3d5265}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:18px;margin:32px 0 8px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px}
+  .card h3{margin:0 0 6px;font-size:16px;color:var(--clay)}
+  .card p{margin:0;font-size:14.5px;color:#4a5c6c}
+  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+  .btn{display:inline-block;padding:13px 26px;border-radius:12px;text-decoration:none;
+       font-weight:700;font-size:15px;color:#fff;background:var(--clay);box-shadow:0 4px 0 #B8420F}
+  .btn.alt{background:var(--teal);box-shadow:0 4px 0 #0A928A}
+  .soon{color:var(--mute);font-size:14px;margin-top:14px;text-align:center}
+  footer{border-top:1px solid var(--line);padding:26px 24px;text-align:center;
+         color:var(--mute);font-size:13.5px;background:#fff}
+  footer a{color:var(--clay)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-in">
+    <h1 class="logo"><span class="a">Word</span><span class="b">slide</span></h1>
+    <p class="tag">Spell fast. Before it falls.</p>
+    <div class="tiles">
+      <div class="tile">S</div><div class="tile">L</div><div class="tile">I</div>
+      <div class="tile">D</div><div class="tile">E</div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <h2>A word game with a clock made of falling letters</h2>
+  <p class="lead">
+    Letters tumble down the mountainside and land in your tray. New ones shove the old ones along,
+    and anything pushed off the end is gone for good. Build words on a 15×15 board — full crossword
+    rules, real bonus squares — and clear the level before the slide buries you.
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Seven worlds</h3>
+      <p>Mudslide, Landslide, Avalanche, Volcano, Sandstorm, Waterfall, Blizzard — each one breaks
+         the rules in its own way. Boulders land on the board. Embers burn letters out of your tray.
+         Frost hides them.</p>
+    </div>
+    <div class="card">
+      <h3>Solo, against the clock</h3>
+      <p>No opponent, no waiting for a turn. Just you, the tray, and the letters piling up.</p>
+    </div>
+    <div class="card">
+      <h3>A new board every day</h3>
+      <p>The Daily gives everyone the same letters in the same order. Two minutes. Compare and
+         share your score.</p>
+    </div>
+    <div class="card">
+      <h3>Pass-and-play duels</h3>
+      <p>Same seed, same letters, two players, one phone. No account needed.</p>
+    </div>
+  </div>
+
+  <div class="cta">
+    <a class="btn" href="#">App Store</a>
+    <a class="btn alt" href="#">Google Play</a>
+  </div>
+  <p class="soon">Coming soon to iOS and Android.</p>
+</div>
+
+<footer>
+  © 2026 Wordslide ·
+  <a href="privacy.html">Privacy Policy</a> ·
+  <a href="terms.html">Terms of Use</a> ·
+  <a href="mailto:nick.potter.one@gmail.com">Support</a>
+  <br><br>
+  Wordslide is an original game, not affiliated with Scrabble or Words With Friends.
+</footer>
+
+</body>
+</html>

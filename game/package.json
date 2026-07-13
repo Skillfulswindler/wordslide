@@ -1,0 +1,36 @@
+{
+  "name": "wordslide",
+  "version": "2.5.0",
+  "private": true,
+  "description": "Wordslide — a mobile word game. Spell fast, before it falls.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node test/run-tests.mjs && node test/validate.test.mjs",
+    "verify": "npm run test && npm run build",
+    "assets": "capacitor-assets generate --iconBackgroundColor #8FD6EC --splashBackgroundColor #8FD6EC",
+    "cap:add:ios": "cap add ios",
+    "cap:add:android": "cap add android",
+    "cap:sync": "npm run build && cap sync"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1",
+    "@fontsource/baloo-2": "^5.0.0",
+    "@capacitor/core": "^6.1.0",
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/browser": "^6.0.0",
+    "@capacitor/haptics": "^6.0.0",
+    "@capacitor-community/admob": "^6.0.0",
+    "@revenuecat/purchases-capacitor": "^9.0.0",
+    "@capacitor-firebase/analytics": "^6.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0",
+    "@capacitor/cli": "^6.1.0",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/ios": "^6.1.0",
+    "@capacitor/android": "^6.1.0"
+  }
+}
