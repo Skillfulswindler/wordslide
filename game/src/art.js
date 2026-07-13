@@ -409,5 +409,101 @@ WS.Art={
     g.generateTexture(key,W,H); g.destroy();
     return key;
   },
+
+  // ---------- level map (Select scene): a mountain you climb ----------
+  // Backdrop: sky gradient + distant range + one central snowy massif. Baked
+  // ONCE — the whole thing is a single Image, no per-frame Graphics.
+  mapBackdrop(scene){
+    const key='map_bg';
+    if(this.has(scene,key)) return key;
+    const g=scene.make.graphics({add:false});
+    const top=0x86C6E6, mid=0xC1E2EF, bot=0xF4E8CC;
+    for(let i=0;i<44;i++){ const t=i/44, c=t<0.5?mix(top,mid,t*2):mix(mid,bot,(t-0.5)*2);
+      g.fillStyle(c,1); g.fillRect(0,Math.floor(H*t),W,Math.ceil(H/44)+1); }
+    // sun glow, upper-left
+    for(let i=6;i>0;i--){ g.fillStyle(0xFFF2C4,0.09); g.fillCircle(66,92,18+i*12); }
+    g.fillStyle(0xFFE9A8,0.92); g.fillCircle(66,92,26);
+    const rnd=prand(4242);
+    // distant range
+    const ridge=(baseY,amp,col,alpha,n)=>{ g.fillStyle(col,alpha); g.beginPath(); g.moveTo(0,H); g.lineTo(0,baseY);
+      for(let i=1;i<=n;i++){ const x=W*i/n; g.lineTo(x-W/n/2,baseY-(i%2?amp:amp*0.5)-rnd()*amp*0.3); g.lineTo(x,baseY-rnd()*amp*0.25); }
+      g.lineTo(W,H); g.closePath(); g.fillPath(); };
+    ridge(H*0.30,64,0xA9CFE1,0.75,5);
+    // central massif — the summit sits top-centre where world 7 lands
+    const peakX=W*0.52, peakY=H*0.10;
+    g.fillStyle(0x8C7A66,1);
+    g.beginPath(); g.moveTo(0,H); g.lineTo(W*0.16,H*0.60); g.lineTo(peakX,peakY);
+    g.lineTo(W*0.90,H*0.56); g.lineTo(W,H*0.64); g.lineTo(W,H); g.closePath(); g.fillPath();
+    // shaded right flank
+    g.fillStyle(0x6F5F4E,0.5);
+    g.beginPath(); g.moveTo(peakX,peakY); g.lineTo(W*0.90,H*0.56); g.lineTo(W,H*0.64); g.lineTo(W,H); g.lineTo(peakX,H); g.closePath(); g.fillPath();
+    // snow cap
+    g.fillStyle(0xF4F8FC,1);
+    g.beginPath(); g.moveTo(peakX,peakY);
+    g.lineTo(W*0.40,H*0.27); g.lineTo(W*0.455,H*0.24); g.lineTo(W*0.50,H*0.285);
+    g.lineTo(W*0.55,H*0.235); g.lineTo(W*0.60,H*0.28); g.lineTo(W*0.655,H*0.27);
+    g.closePath(); g.fillPath();
+    // green lower slopes fading to warm base
+    g.fillStyle(0x6FA85B,0.92);
+    g.beginPath(); g.moveTo(0,H); g.lineTo(W*0.20,H*0.74); g.lineTo(W*0.5,H*0.84); g.lineTo(W*0.8,H*0.73); g.lineTo(W,H); g.closePath(); g.fillPath();
+    g.generateTexture(key,W,H); g.destroy();
+    return key;
+  },
+
+  // Winding trail through the node centres (bottom -> top), baked into one Image.
+  // pts: [{x,y}...] in logical coords. Catmull-Rom smoothed rope + footpath dots.
+  mapTrail(scene,key,pts){
+    if(this.has(scene,key)) return key;
+    if(!pts||pts.length<2) return null;
+    // smooth polyline through pts
+    const path=[]; const at=i=>pts[Math.max(0,Math.min(pts.length-1,i))];
+    for(let i=0;i<pts.length-1;i++){
+      const p0=at(i-1),p1=at(i),p2=at(i+1),p3=at(i+2);
+      for(let t=0;t<1;t+=0.045){ const tt=t*t,ttt=tt*t;
+        path.push({
+          x:0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*tt+(-p0.x+3*p1.x-3*p2.x+p3.x)*ttt),
+          y:0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*tt+(-p0.y+3*p1.y-3*p2.y+p3.y)*ttt)});
+      }
+    }
+    path.push(pts[pts.length-1]);
+    const g=scene.make.graphics({add:false});
+    const blob=(col,alpha,r,dy)=>{ g.fillStyle(col,alpha); for(const p of path) g.fillCircle(p.x,p.y+(dy||0),r); };
+    blob(0x000000,0.12,15,4);      // soft shadow
+    blob(0x9C7B4C,1,14,0);         // trail edge (darker)
+    blob(0xE7CF9E,1,11,0);         // trail body (tan)
+    blob(0xF6EBC9,0.9,6,0);        // inner highlight
+    // dashed footpath dots every ~8th sample
+    g.fillStyle(0xFFFFFF,0.6);
+    for(let i=4;i<path.length;i+=8) g.fillCircle(path[i].x,path[i].y,2.6);
+    g.generateTexture(key,W,H); g.destroy();
+    return key;
+  },
+
+  // A single node medallion, baked per state (key varies by accent / locked).
+  mapNode(scene,key,accent,locked){
+    if(this.has(scene,key)) return key;
+    const D=140, R=D/2, cy=R+2;
+    const base=locked?0x9AA6B0:accent;
+    const g=scene.make.graphics({add:false});
+    g.fillStyle(0x000000,0.18); g.fillCircle(R,cy+7,R-6);                 // drop shadow
+    g.fillStyle(locked?0x6E7A85:shade(accent,0.42),1); g.fillCircle(R,cy,R-4); // stone ring
+    g.fillStyle(base,1); g.fillCircle(R,cy,R-16);                        // inner disc
+    g.fillStyle(0xFFFFFF,0.30); g.fillEllipse(R,cy-16,R*0.95,R*0.55);    // top gloss
+    g.lineStyle(4,tint(base,0.42),0.9); g.strokeCircle(R,cy,R-16);       // rim light
+    g.lineStyle(6,shade(base,0.32),0.5); g.strokeCircle(R,cy,R-4);       // outer edge
+    g.generateTexture(key,D,D+10); g.destroy();
+    return key;
+  },
+
+  // Soft ring for the pulsing "you are here" node.
+  mapPulse(scene){
+    const key='map_pulse';
+    if(this.has(scene,key)) return key;
+    const D=160, R=D/2;
+    const g=scene.make.graphics({add:false});
+    g.lineStyle(10,0xFFFFFF,1); g.strokeCircle(R,R,R-12);
+    g.generateTexture(key,D,D); g.destroy();
+    return key;
+  },
 };
 })();

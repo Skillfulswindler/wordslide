@@ -145,46 +145,81 @@ WS.HomeScene = class extends Phaser.Scene {
 WS.SelectScene = class extends Phaser.Scene {
   constructor(){ super("select"); }
   create(){
-    const bgk=this.textures.exists("bg_home")?"bg_home":null;
-    if(bgk) this.add.image(0,0,bgk).setOrigin(0).setDisplaySize(W,H); else skyBG(this,0xCDEEF7,0xFFF7E8);
-    WS.Art.dressScene(this,"home",{depth:0,bush:false});
-    WS.shadow(this.add.text(MARGIN,20,"Choose your slide",WS.T(26,"#FFF3DC",{strokeColor:"#3A5A2A",strokeWidth:5})),2);
-    this.add.text(MARGIN,62,"Beat a world's target score to unlock the next.",{fontFamily:WS.FONT,fontSize:"12px",fontStyle:"bold",color:"#ffffff"}).setAlpha(0.95);
-    backButton(this,"home");
+    // Mountain backdrop — the thing you climb. Baked once (art.js), one Image.
+    this.add.image(0,0,WS.Art.mapBackdrop(this)).setOrigin(0).setDisplaySize(W,H).setDepth(0);
 
-    // TEST BAR: unlock every world + start any world on any level.
     this.testOn = WS.store.get("unlockAll",false);
     this.startLevel = WS.store.get("testLevel",1);
     const BAR = 56;
 
-    // cards
-    const top=104, cw=W-2*MARGIN, n=WS.WORLD_ORDER.length, gap=12;
-    const ch=(H-top-30-BAR-(n-1)*gap)/n;
-    WS.WORLD_ORDER.forEach((key,i)=>{
-      const cfg=WS.WORLDS[key], y=top+i*(ch+gap), x=MARGIN;
-      const unlocked=WS.isUnlocked(key);
-      const g=this.add.graphics(); g.fillStyle(0xffffff,unlocked?0.96:0.7); g.fillRoundedRect(x,y,cw,ch,16);
-      g.lineStyle(2,unlocked&&this.testOn?0x0FB8B0:0xEADFCA,1); g.strokeRoundedRect(x,y,cw,ch,16);
-      const cd=Math.min(ch-22,56), cxx=x+18+cd/2, cyy=y+ch/2;
-      g.fillStyle(unlocked?cfg.accent:0xB9C2CB,1); g.fillCircle(cxx,cyy,cd/2);
-      if(unlocked) this.add.text(cxx,cyy,""+cfg.order,WS.T(22,"#ffffff",{strokeColor:"#4A2E14",strokeWidth:3})).setOrigin(0.5);
-      else if(this.textures.exists("ic_lock")) this.add.image(cxx,cyy,"ic_lock").setDisplaySize(26,26);
-      else this.add.text(cxx,cyy,"X",WS.T(20,"#ffffff")).setOrigin(0.5);
-      const tx=x+18+cd+16;
-      this.add.text(tx,y+ch/2-22,cfg.name,{fontFamily:WS.FONT,fontSize:"20px",fontStyle:"bold",color:HEX(unlocked?cfg.accentD:C.mute)});
-      const sub = unlocked ? cfg.sub : ("Score "+cfg.unlock+" in "+WS.WORLDS[WS.WORLD_ORDER[i-1]].name+" to unlock");
-      this.add.text(tx,y+ch/2+4,sub,{fontFamily:WS.FONT,fontSize:"12px",color:HEX(C.mute)});
-      const best=WS.store.best(key);
-      const rt = unlocked ? (this.testOn ? ("Lv "+this.startLevel+" ›") : (best?("Best "+best):"Play ›")) : "";
-      this.add.text(x+cw-16,y+ch/2,rt,{fontFamily:WS.FONT,fontSize:"13px",fontStyle:"bold",color:HEX(C.teal)}).setOrigin(1,0.5);
+    // --- node layout: a serpentine climb, world 1 at the base, 7 at the summit ---
+    const order=WS.WORLD_ORDER, n=order.length;
+    const topY=140, botY=H-BAR-64, cx=W/2, amp=96;
+    const stepY=(botY-topY)/(n-1);
+    const off=i=>(i%2===0?-1:1)*(0.5+0.2*Math.sin(i*1.3));
+    const pos=order.map((k,i)=>({x:cx+amp*off(i), y:botY-i*stepY}));
+
+    // current world = highest unlocked; it pulses ("you are here")
+    let cur=0; order.forEach((k,i)=>{ if(WS.isUnlocked(k)) cur=i; });
+
+    // winding trail behind the nodes (baked)
+    const trail=WS.Art.mapTrail(this,"map_trail",pos);
+    if(trail) this.add.image(0,0,trail).setOrigin(0).setDepth(1);
+
+    const ND=68;                                   // node display diameter
+    order.forEach((key,i)=>{
+      const cfg=WS.WORLDS[key], p=pos[i], unlocked=WS.isUnlocked(key);
+      const nodeKey = unlocked ? ("node_"+cfg.accent.toString(16)) : "node_lock";
+      WS.Art.mapNode(this,nodeKey,cfg.accent,!unlocked);
+
+      // pulsing halo on the current node
+      if(i===cur){
+        const ring=this.add.image(p.x,p.y,WS.Art.mapPulse(this)).setDepth(2).setScale(ND/160).setAlpha(0.7);
+        this.tweens.add({targets:ring,scale:ND/160*1.5,alpha:0,duration:1300,repeat:-1,ease:"Sine.easeOut"});
+      }
+
+      const node=this.add.image(p.x,p.y,nodeKey).setOrigin(0.5,0.48).setDepth(3).setScale(ND/140);
+      if(i===cur) this.tweens.add({targets:node,scale:ND/140*1.06,duration:760,yoyo:true,repeat:-1,ease:"Sine.easeInOut"});
+
+      // node face: world number (unlocked) or lock (locked)
       if(unlocked){
-        const z=this.add.zone(x,y,cw,ch).setOrigin(0).setInteractive();
-        z.on("pointerup",()=>this.scene.start("game",{
-          world:key, mode:"classic",
-          startLevel: this.testOn ? this.startLevel : 1,
-        }));
+        WS.shadow(this.add.text(p.x,p.y,""+cfg.order,WS.T(24,"#FFF6E4",{strokeColor:WS.HEX(cfg.accentD),strokeWidth:4})).setOrigin(0.5).setDepth(4),2);
+      } else if(this.textures.exists("ic_lock")){
+        this.add.image(p.x,p.y,"ic_lock").setDisplaySize(28,28).setDepth(4);
+      } else {
+        this.add.text(p.x,p.y,"🔒",{fontFamily:WS.FONT,fontSize:"22px"}).setOrigin(0.5).setDepth(4);
+      }
+
+      // labels under the node (outlined text reads on the mountain — no plates)
+      const ly=p.y+ND/2+8;
+      WS.shadow(this.add.text(p.x,ly,cfg.name,WS.T(17,unlocked?"#FFFFFF":"#E6ECF2",{strokeColor:"#2A3A22",strokeWidth:4})).setOrigin(0.5,0).setDepth(4).setAlpha(unlocked?1:0.9),2);
+      let sub;
+      if(!unlocked){
+        const prev=WS.WORLDS[order[i-1]];
+        sub="🔒 Reach "+cfg.unlock+" in "+prev.name;
+      } else if(this.testOn){
+        sub="Start · Lv "+this.startLevel+" ›";
+      } else {
+        const best=WS.store.best(key), bl=WS.store.bestLevel(key);
+        sub = best>0 ? ("Best "+best+(bl>0?("  ·  Lv "+bl):"")) : "Play ›";
+      }
+      WS.shadow(this.add.text(p.x,ly+21,sub,WS.T(12,"#FFFFFF",{weight:"700",strokeColor:"#2A3A22",strokeWidth:3})).setOrigin(0.5,0).setDepth(4).setAlpha(0.96),1);
+
+      // tap an unlocked node to play
+      if(unlocked){
+        const z=this.add.zone(p.x-ND/2,p.y-ND/2,ND,ND).setOrigin(0).setInteractive().setDepth(5);
+        z.on("pointerdown",()=>this.tweens.add({targets:node,scale:ND/140*0.92,duration:80,yoyo:true}));
+        z.on("pointerup",()=>{
+          WS.Audio.sfx(560,0.06,"sine",0.05);
+          this.scene.start("game",{world:key,mode:"classic",startLevel:this.testOn?this.startLevel:1});
+        });
       }
     });
+
+    // header — outlined text reads on the sky; no scrim (would cover Back)
+    WS.shadow(this.add.text(MARGIN,20,"Climb the slide",WS.T(26,"#FFF3DC",{strokeColor:"#3A5A2A",strokeWidth:5})).setDepth(10),2);
+    this.add.text(MARGIN,62,"Beat a world's target score to unlock the next peak.",WS.T(12,"#FFFFFF",{weight:"700",strokeColor:"#2A3A22",strokeWidth:3})).setAlpha(0.98).setDepth(10);
+    backButton(this,"home");
 
     this.buildTestBar(H-BAR+2, BAR-10);
   }
