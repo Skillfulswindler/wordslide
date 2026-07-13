@@ -215,7 +215,7 @@ they load automatically — nothing is hardcoded. `home` stays procedural. Vite
 bundles them (hashed URLs); do NOT put the `Textures/tiles/` PBR sets here
 (those are for letter tiles/board, separate task).
 
-Superseded: `Wordslide_Game_v1–v10.html`. Current export: `Wordslide_Game_v11.html`
+Superseded: `Wordslide_Game_v1–v11.html`. Current export: `Wordslide_Game_v12.html`
 (regenerate: `node game/build_standalone.mjs <prevExport> <outFile>` — reuses the
 previous export's head/font/wordlist preamble, re-concats the modules from
 current `src/`, and swaps the `import.meta.glob` manifests for inline base64
